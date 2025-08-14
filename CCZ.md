@@ -262,3 +262,56 @@ FInstancedAttributes,用来封装UTempestBaseAttributeObject* ,为什么要这�
    - **通常是行为导向的、包含逻辑的**
 
 一般Attributes只负责提供数据，Properties还会有能力实现
+
+## UTempestBaseStateManagerComponent
+
+### 概述:
+
+一个用于管理游戏对象状态的组件，实现了状态模式，允许游戏对象在不同的行为状态之间切换和管理。
+
+只允许有一个主动状态,可以拥有多个被动状态
+
+### 核心成员变量:
+
+1. **ActivatableStates**: TArray<UTempestBaseStateObject*> - 存储所有可激活状态的数组
+2. **QueuedStates**: TArray<TSubclassOf<UTempestBaseStateObject>> - 存储排队等待执行的状态类
+3. **PassiveStates**: TArray<UTempestBaseStateObject*> - 存储被动状态的数组
+4. **CurrentActiveState**: UTempestBaseStateObject* - 当前激活的状态对象
+5. **OnUpdatedCurrentActiveState**: 委托/事件，当当前激活状态更新时广播
+
+###  工作流程
+
+1. **状态执行流程**:
+   - 检查状态是否存在 → 不存在则构造新状态
+   - 检查条件(可选) → 执行状态
+   - 触发PreStateActivation → StartState → PostStateActivation
+2. **状态切换流程**:
+   - 当前状态PreLossOfActiveState
+   - 设置新状态
+   - 广播OnUpdatedCurrentActiveState
+   - 原状态PostLossOfActiveState
+
+### 示例
+
+详情请见[一个攻击的流程示意(将这几个组件串起来):](#一个攻击的流程示意(将这几个组件串起来):)
+
+
+
+# 实际项目
+
+## 天赋树
+
+### 思维导图:
+
+现在玩家属性和能力完全由武器提供,也就是不捡起武器,玩家将没有任何属性和能力,所以需要做出修改
+
+优先看能不能通过覆写组件来实现，不行在新加
+
+逻辑层面分为四个部分
+
+- 角色:首先需要新增一个数据资产CharacterInfo,专门用来存储玩家的基础属性,以及一些特性,对于角色树来说,我需要存储一个字典Key为技能Tag,value为技能的等级.代表玩家当前拥有的技能.
+- 能力:首先现在能力的属性比较少,需要新增技能的最大等级,前置技能的Tag以及等级,以及各种UI图标,以及在释放技能时需要判断天赋数中是否存在这个技能,其余不变.
+- 属性:现在人物的属性全根据武器来,拆分成两块角色+武器,如果有的天赋是增加属性的话,在点击完天赋就增加角色属性,保存到CharacterInfo中
+- 学习天赋：
+
+![image-20250814194111577](./TyporaImage/image-20250814194111577.png)
