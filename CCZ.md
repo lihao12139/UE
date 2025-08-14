@@ -151,9 +151,46 @@
 
 ### 属性业务类
 
-UTempestBaseAttributeObject
+有两种属性，一个就是Attribute另一个是AttributeModifier(属性修饰器)
+
+两者之间的差异
+
+| 维度         | Attribute (属性)    | ModifyAttribute (属性修饰) |
+| :----------- | :------------------ | :------------------------- |
+| **本质**     | 基础数据容器        | 对属性的操作或影响规则     |
+| **可变性**   | 存储基础值          | 定义如何改变属性值         |
+| **生命周期** | 通常长期存在        | 可能是临时的或条件性的     |
+| **功能**     | "是什么" - 存储状态 | "如何变" - 定义变化规则    |
+
+具体解释:
+
+#### UTempestBaseAttributeObject
+
+每个属性带有两个结构体用来完成业务
+
+FAttributeProperties,用来存储属性的基本属性
+
+![image-20250814163942837](./TyporaImage/image-20250814163942837.png)
+
+FInstancedAttributes,用来封装UTempestBaseAttributeObject* ,为什么要这样,因为Instanced关键字以及UTempestBaseAttributeObject类中含有关键字EditInlineNew,代表这个类我是可以在外面直接选择实例化的,但是一般这个属性会含有多个所以会用数组,但是UE里面用数组直接操作指针不友好,所以需要包一层结构体,来在外面使用
+
+![image-20250814164005861](./TyporaImage/image-20250814164005861.png)
+
+#### UTempestBaseAttributeModifier
+
+每个属性修饰器都会带有一个FAttributeModifierProperties结构体，用于存储这个修饰器的核心信息
+
+属性的Tag、是否无限时间、持续时间、修饰器间隔、添加的数量
+
+注意这里面的Tag是属性的Tag，AttributeModifierTag 这个变量表示的是修饰器的Tag
+
+![image-20250814162000931](./TyporaImage/image-20250814162000931.png)
+
+
 
 ### 示例
+
+#### 基础属性
 
 装备武器的时候会更新这个武器的属性
 
@@ -173,6 +210,42 @@ UTempestBaseAttributeObject
 
 ![image-20250814141051597](./TyporaImage/image-20250814141051597.png)
 
+在需要这个属性的地方可以通过GetAttributeOfGameplayTag这个方法来获取你需要的属性
+
+![image-20250814144102137](./TyporaImage/image-20250814144102137.png)
+
+目前版本角色属性完完全全是根据武器的配置来的，没有自身的基础属性，TODO需要修改
+
+#### 修饰器属性
+
+依旧拿装备武器后更新数据举例，这个属性配置在AttrubuteModifiers中，通过类来构造属性
+
+![image-20250814150439808](./TyporaImage/image-20250814150439808.png)
+
+![image-20250814150807510](./TyporaImage/image-20250814150807510.png)
+
+首先ConstructAttributeModifierOfClass方法会调用Modifier的ConstructAttributeModifier方法
+
+![image-20250814153242253](./TyporaImage/image-20250814153242253.png)
+
+然后再BP_BaseAttributeModifer蓝图类中
+
+首先根据tag获取所有的Attribute
+
+![image-20250814154815953](./TyporaImage/image-20250814154815953.png)
+
+然后将自身存入到CreatedAttributeModifiers
+
+![image-20250814160833446](./TyporaImage/image-20250814160833446.png)
+
+然后根据结构体FAttributeModifierProperties来配置属性
+
+![image-20250814163238707](./TyporaImage/image-20250814163238707.png)
+
+
+
+
+
 ## UTempestPropertiesComponent
 
 管理游戏实体的特殊属性（特性）实例性的类
@@ -186,6 +259,6 @@ UTempestBaseAttributeObject
 2. **Properties**:
    - 表示更复杂的行为或特殊能力
    - 如: 技能消耗、允许通过按键通过的转态，以及状态和能力，以及动作的蒙太奇
-   - 通常是行为导向的、包含逻辑的
+   - **通常是行为导向的、包含逻辑的**
 
 一般Attributes只负责提供数据，Properties还会有能力实现
