@@ -198,7 +198,7 @@ FInstancedAttributes,用来封装UTempestBaseAttributeObject* ,为什么要这�
 
 ![image-20250814135852771](./TyporaImage/image-20250814135852771.png)
 
-更新属性首先判断，配置的数据存不存在，这个配置是这个武器对应的数据资产，
+在更新属性首先判断，配置的数据存不存在，这个配置是这个武器对应的数据资产，
 
 ![image-20250814140416073](./TyporaImage/image-20250814140416073.png)
 
@@ -284,18 +284,150 @@ FInstancedAttributes,用来封装UTempestBaseAttributeObject* ,为什么要这�
 1. **状态执行流程**:
    - 检查状态是否存在 → 不存在则构造新状态
    - 检查条件(可选) → 执行状态
-   - 触发PreStateActivation → StartState → PostStateActivation
+   - 触发PreStateActivation → Start State → PostStateActivation
 2. **状态切换流程**:
    - 当前状态PreLossOfActiveState
    - 设置新状态
    - 广播OnUpdatedCurrentActiveState
    - 原状态PostLossOfActiveState
 
+### 特性业务类
+
+
+
 ### 示例
 
 详情请见[一个攻击的流程示意(将这几个组件串起来):](#一个攻击的流程示意(将这几个组件串起来):)
 
+### 
 
+# UI框架
+
+大部分功能通过UMS_GameInstance以及WB_MenuMaster组合来实现
+
+内容很多我用到哪写哪
+
+## 显示一个菜单内容
+
+调用UMS_GameInstance，中的方法
+
+![image-20250818164714510](./TyporaImage/image-20250818164714510.png)
+
+传入要打开的界面已经动画类型
+
+![image-20250818164803801](./TyporaImage/image-20250818164803801.png)
+
+然后去UMS_GameInstance添加一个新的UI界面，具体可以看里面的天赋界面
+
+## 返回上一菜单ESC
+
+在WB_MenuMaster中的这个方法，来检测可聚焦UI的按键
+
+![image-20250818175819990](./TyporaImage/image-20250818175819990.png)
+
+在判断回退按键的时候，判断自己的按键
+
+![image-20250818194307310](./TyporaImage/image-20250818194307310.png)
+
+## WB_MenuMaster:
+
+### Load_Content_From_Class:
+
+传入要加载的WBP类，加载这界面的动画类型
+
+检查是否有加载事件正在进行，如果没有，则阻止它并开始清除内容
+
+先检查是否有动画正在播放，返回的是个not paly
+
+设置是否是上一个节点，播放的动画类型，是否聚焦输入框
+
+![image-20250819211119405](./TyporaImage/image-20250819211119405.png)
+
+禁用所有输入，将Input Disabled设置为false
+
+![image-20250819211645408](./TyporaImage/image-20250819211645408.png)![image-20250819211652571](./TyporaImage/image-20250819211652571.png)
+
+设置为不可点击设置，然后将要加载的界面设置为Target Content Class
+
+![image-20250819211804390](./TyporaImage/image-20250819211804390.png)
+
+将最后一步保存起来，以便在返回菜单时使用。当前显示的就是最后一步存到Current Class
+
+![image-20250819211949490](./TyporaImage/image-20250819211949490.png)
+
+有个一个字典ContentStepMap,Key是目标页面，value是当前页面
+
+![image-20250819212033105](./TyporaImage/image-20250819212033105.png)
+
+# AI行为树的流程：
+
+## 如何进入行为树：
+
+首先是生成NPC，简单过一下后面，可能不是这种方法生成
+
+生成碰撞体用的是，BP_Tempest_AI_Spawner蓝图。他两之间创建起联系通过C++方法GetSpawner创建联系
+
+![image-20250821112245173](./TyporaImage/image-20250821112245173.png)
+
+BP_StandardSpawnerProcessor中根据碰撞检测生成角色，这个是C++中异步加载的方法
+
+![image-20250821103818255](./TyporaImage/image-20250821103818255.png)
+
+这里面会调用自身的生成物体方法
+
+![image-20250821105909607](./TyporaImage/image-20250821105909607.png)
+
+生成物体后，会调用角色基类BP_TempestBaseCharacter中的Possessed
+
+这里面会检测角色有没有武器，没有武器的话会生成武器
+
+![image-20250821114646142](./TyporaImage/image-20250821114646142.png)
+
+会走EquipWeapon的逻辑，这个逻辑见[示例](#示例-1)
+
+之后会根据感官来,来尝试进入装备状态,也就进入了AI行为树第一个状态
+
+![image-20250821133725554](./TyporaImage/image-20250821133725554.png)
+
+![image-20250821120022067](./TyporaImage/image-20250821120022067.png)
+
+## 状态之间的切换:
+
+装备能力的状态结束会有一个动画事件来通知结束当前能力结束
+
+![image-20250821135405407](./TyporaImage/image-20250821135405407.png)
+
+在结束通知里面,会清除当前的能力,然后进入下一个状态
+
+![image-20250821140217665](./TyporaImage/image-20250821140217665.png)
+
+在装备状态的的尝试下一状态
+
+先判断有没有玩家控制的Pawn,有的话进入追寻状态
+
+![image-20250821140657575](./TyporaImage/image-20250821140657575.png)
+
+没有的话进入Idle状态
+
+![image-20250821140906553](./TyporaImage/image-20250821140906553.png)
+
+进入FollowingState,在PreStateActivation,
+
+首先在UpDateFollowingBegavior中将配置的行为树数据绑定起来，这个数据主要是判断各个速度的距离
+
+![image-20250821142541667](./TyporaImage/image-20250821142541667.png)
+
+![image-20250821142557279](./TyporaImage/image-20250821142557279.png)
+
+之后adjust movement speed based on distance,根据距离调整速度
+
+获取玩家和NPC之间的距离
+
+![image-20250821143009907](./TyporaImage/image-20250821143009907.png)
+
+然后根据距离来设置档期啊你速度
+
+![image-20250821143455534](./TyporaImage/image-20250821143455534.png)
 
 # 实际项目
 
@@ -311,7 +443,75 @@ FInstancedAttributes,用来封装UTempestBaseAttributeObject* ,为什么要这�
 
 - 角色:首先需要新增一个数据资产CharacterInfo,专门用来存储玩家的基础属性,以及一些特性,对于角色树来说,我需要存储一个字典Key为技能Tag,value为技能的等级.代表玩家当前拥有的技能.
 - 能力:首先现在能力的属性比较少,需要新增技能的最大等级,前置技能的Tag以及等级,以及各种UI图标,以及在释放技能时需要判断天赋数中是否存在这个技能,其余不变.
-- 属性:现在人物的属性全根据武器来,拆分成两块角色+武器,如果有的天赋是增加属性的话,在点击完天赋就增加角色属性,保存到CharacterInfo中
-- 学习天赋：
+- 属性:在UTempestBaseAttributeObject中添加新的结构体FAttributeToAbilities，里面添加新的
+- 学习天赋：当天赋满足学习条件时，更新Character Info
 
 ![image-20250814194111577](./TyporaImage/image-20250814194111577.png)
+
+### 实现：
+
+UI显示
+
+在BP_PC_TCF_BasePlayerController 添加打开天赋界面的函数
+
+![image-20250818164149470](./TyporaImage/image-20250818164149470.png)
+
+# 研究
+
+## 武器系统集成大部分属性和能力的优缺点
+
+### 优点：
+
+- 获取组件和属性更加方便，因为所有的都集成在一起了你想获取某个组件，直接按照下面选择你想要获取的组价就可以获取
+  ![image-20250814211412657](./TyporaImage/image-20250814211412657.png)
+- 所有的数据也都在一起方便保存和读取
+
+### 缺点：
+
+#### 多装备冲突
+
+不支持多装备，因为他每次装备都会清除属性，比如左手剑右手盾这种情况会因为清除属性只会使用最后装备的属性，以及衣服防具这类装备也会和武器冲突，但如果像只狼那样就一把太刀一套衣服一直玩的话这个问题到不大
+
+#### 配置繁琐且有问题(这个问题可能是因为我自身)
+
+配置很复杂很复杂，策划进行配置的话会有难度，因为我都要看晕了，就拿配置技能来举例，我需要在众多没有提示的路径里面找到GeneralProperties的索引5然后在这个里面的众多状态找到玩家的攻击状态然后再里面的Abilities里面，添加自己的技能
+
+![image-20250815114036046](./TyporaImage/image-20250815114036046.png)
+
+但是到这一步并不算完,因为你会发现你只是把这个技能配进来了,但技能的属性在哪里配置?
+
+技能的基类里面有做出属性的声明
+
+![image-20250815115309037](./TyporaImage/image-20250815115309037.png)
+
+![image-20250815115443148](./TyporaImage/image-20250815115443148.png)
+
+接下来才是变态的,技能配置,目前技能拥有的属性较少,后期可能还得加属性比如等级之类,目前的属性配置在两个地方配置第一个是在你的技能蓝图里面的变量配置,没有读表这一步,策划想改点cd什么的需要再程序的蓝图里面修改,应该是不合理的
+
+![image-20250815133357316](./TyporaImage/image-20250815133357316.png)
+
+其次他也不是全在蓝图里面配置,有些属性还是在数据资产里面配置
+
+![image-20250815133457890](./TyporaImage/image-20250815133457890.png)
+
+就比如你的蒙太奇动画，需要在索引四里面找到对应的进行配置
+![image-20250815133601363](./TyporaImage/image-20250815133601363.png)
+
+这整个技能的配置逻辑给我的感觉就是既想要解耦但是又耦合在一起，很奇怪。
+
+#### 对于技能树来说
+
+这是我做的demo里面的属性配值，有些属性，比如技能所在的技能树节点，前置条件，等级，技能描述，
+
+其中像前置条件，技能所在节点，技能的最大等级，数值，以及技能描述这些都是和策划相关的内容，
+
+但现在我如果在旧的基础上改就会有两个疑问我是单启一个类还是就在技能的基础属性里面改
+
+在基础里面改的话策划就配置不了这个技能，
+
+我预想的改动是整个数据资产里面的数据是只有程序能修改，因为数据资产既可以读也可以保存，然后所以需要策划配置的根据不同的模块分成不同的表
+
+![image-20250815134526624](./TyporaImage/image-20250815134526624.png)
+
+![image-20250815134502661](./TyporaImage/image-20250815134502661.png)
+
